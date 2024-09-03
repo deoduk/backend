@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+  </head>
+  <body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+    function fMakeRoom(){
+      // room 네임스페이스 연결
+      const socket = io.connect('http://localhost:3001/room', {
+        path: '/socket.io',
+      });
+
+      socket.on('newRoom', (data) => {
+        // code for newRoom event
+      })
+
+      socket.on('removeRoom', (data) => {
+        // code for removeRoom event  
+      })
+    }
+    </script>
+  </body>
+</html>

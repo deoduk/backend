@@ -1,0 +1,30 @@
+<form>
+    성명:<input type="text" id="name" /><br>
+    카카오계정:<input type="text" id="email" /><br>
+    비밀번호:<input type="text" id="password" /><br>
+    프로필사진:<input type="text" id="profile_pic" /><br>
+    <button onclick="fSave()">저장하기</button>
+</form>
+
+<script>
+function fSave(){
+    event.preventDefault()
+
+    var obj = {
+        "name": document.getElementById("name").value,
+        "email": document.getElementById("email").value,
+        "password": document.getElementById("password").value,
+        "profile_pic": document.getElementById("profile_pic").value
+    }
+    alert(JSON.stringify(obj));
+    fetch('/api/register',{
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(obj)
+    })
+    .then((response)=>response.json())
+    .then((json) => alert(json.message))
+}
+</script>

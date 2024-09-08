@@ -2,7 +2,7 @@ const UserModel = require('../models/UserModel')
 const bcryptjs = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
-async function checkSignIn(req,res){
+async function signIn(req,res){
     try{
         const { email, password } = req.body
         const checkEmail = await UserModel.findOne({email}).select("-password") //select절에서 password제외
@@ -33,6 +33,7 @@ async function checkSignIn(req,res){
             http: true,
             secure: true
         }
+        console.log('checkIn',checkEmail)
         return res.cookie('token',token,cookieOptions).status(200).json({
             message: '환영합니다. 즐거운 시간되세요.',
             token: token,
@@ -47,4 +48,4 @@ async function checkSignIn(req,res){
     }
 }
 
-module.exports = checkSignIn
+module.exports = signIn

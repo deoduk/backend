@@ -3,8 +3,9 @@ const { Server } = require('socket.io')
 const http =  require('http')
 const getUserDetailsFromToken = require('../helpers/getUserDetailsFromToken')
 const UserModel = require('../models/UserModel')
-const { MessageModel, ConversationModel } = require('../models/ConversationModel')
-const getConversation = require('../helpers/getConversation')
+const { ChannelModel, JoinModel, MessageModel } = require('../models/ChatModel')
+const getChannels = require('../helpers/getChannels')
+const getMessages = require('../helpers/getMessages')
 
 const app = express()
 
@@ -37,103 +38,99 @@ io.on('connection',async(socket)=>{
     socket.join(user?._id?.toString()) //socket.id와 user._id를 조인시킴 (toString해야 메세지 실시간 도착) 
     onlineUser.add(user?._id?.toString())
 
-    // 접속하면 제일먼저
-    io.emit('onlineUser',Array.from(onlineUser)) //주거니
-    socket.on('message-page',async(userId)=>{ //받거니
-        console.log('query userId',userId)
+    // 최초 접속하면 온라인명단을 보내준다.
+    io.emit('onlineUser',Array.from(onlineUser))
 
-        // 1. 대화상대 정보 보내기
-        const userDetails = await UserModel.findById(userId).select('-password')
+    // sidebar : 채팅방 목록달라는 요청
+    socket.on('sidebar', async(userId)=>{
+        const channels = await getChannels(userId)
+        socket.emit('channel-list',channels)
+    })
+
+    // 방안에 들어올 때
+    socket.on('message-page',async(channelId)=>{
+        console.log('query channelId',channelId)
+
+        // 1. 채널세부정보 보내기
+        const channelDetails = await ChannelModel.findById(channelId)
         const payload = {
-            _id: userDetails?._id,
-            name: userDetails?.name,
-            email: userDetails?.email,
-            profile_pic: userDetails?.profile_pic,
-            online: onlineUser.has(userId)
+            _id: channelDetails?._id,
+            name: channelDetails?.name,
+            channel_pic: channelDetails?.channel_pic
         }
-        socket.emit('message-user',payload)
-        // 2. 이전 대화목록 보내기
-        const getConversationMessage = await ConversationModel.findOne({
-            "$or": [
-                {sender: user?._id, receiver: userId}, // 수신함 == 상대방이 먼저보낸것으로 시작한 방이든
-                {sender: userId, receiver: user?._id} // 발신함 == 내가 먼저보낸것으로 시작한 방이든
-            ]
-        }).populate('messages').sort({updatedAt: -1}) // 자동으로 조인해서 메세지 데이타 갖어옴
-        console.log('getConversationMessage',getConversationMessage)
-        socket.emit('message',getConversationMessage || [])
+        socket.emit('message-channel',payload)
+        
+        // 2. 대화방에 있는 메세지들 보내기
+        const allMessage = await getMessages(channelId)
+        socket.emit('messages',allMessage || [])
+    })
+
+    // 새 채널 생성
+    socket.on('new channel', async(userId,members)=>{
+        // const createChannel = await ChannelModel({
+        //     name: data?.channelName,
+        //     channel_pic: data?.channelProfilePic
+        // })
+        // channle = await createChannel.save() // DB에 저장
+        return
+    })
+    // 새 멤버 추가
+    socket.on('add members', async(channelId,members)=>{
+        //구현하세요
     })
 
     // 새로운 대화
     socket.on('new message', async(data)=>{
         console.log('data',data)
-        // 1. 기존에 이사람과 나눈대화방이 있는지?
-        let conversation = await ConversationModel.findOne({
-            "$or" : [
-                {sender: data?.sender, receiver: data?.receiver},
-                {sender: data?.receiver, receiver: data?.sender}
-            ]
-        })
-        // 2. 첫대화이면 대화방 생성
-        if (!conversation){
-            const createConversation = await ConversationModel({
-                sender: data?.sender,
-                receiver: data?.receiver
-            })
-            conversation = await createConversation.save() // DB에 저장
-        }
-        // 3. 대화1건 생성
+        // 대화1건 생성
         const message = new MessageModel({
-            text: data.text,
-            imageUrl: data.imageUrl,
-            videoUrl: data.videoUrl,
-            msgByUserId: data?.msgByUserId,
+            text: data?.text,
+            imageUrl: data?.imageUrl,
+            videoUrl: data?.videoUrl,
+            writeUser: data?.writeUser,
         })
         const saveMessage = await message.save() // DB에 저장
-        // 4. 대화방과 대화1건 연결
-        const updateConversation = await ConversationModel.updateOne({_id: conversation?._id},{
-            "$push": {messages: saveMessage?._id} // 배열에 추가
-        })
-        // 5. sender와 receiver에게 보내기
-        // 5-1. 위 1번에 있는 대화방 검색
-        const getConversationMessage = await ConversationModel.findOne({
-            "$or": [
-                {sender: data?.sender, receiver: data?.receiver},
-                {sender: data?.receiver, receiver: data?.sender}
-            ]
-        }).populate('messages').sort({updatedAt: -1}) // 자동으로 조인해서 메세지 데이타 갖어옴
-        io.to(data?.sender).emit('message',getConversationMessage || [])
-        io.to(data?.receiver).emit('message',getConversationMessage || [])
-        // 6. 사이드바에 대화방 목록 업데이트
-        const conversationSender = await getConversation(data?.sender)
-        const conversationReceiver = await getConversation(data?.receiver)
-        io.to(data?.sender).emit('conversation',conversationSender)
-        io.to(data?.receiver).emit('conversation',conversationReceiver)
-    })
+        console.log('saveMessage', saveMessage)
 
-    // sidebar : 채팅방 목록
-    socket.on('sidebar', async(currentUserId)=>{
-        const conversation = await getConversation(currentUserId)
-        socket.emit('conversation',conversation)
+        // 4. 대화방과 대화1건 연결
+        const updateChannel = await ChannelModel.updateOne({
+            _id: data.channelId
+        },{
+            "$push": {messages: saveMessage?._id}, // 배열에 추가
+            lastMessage: saveMessage?._id
+        })
+        console.log('updatedChannel',updateChannel)
+
+        // 5. 채널에 Join한 사람들에게 보내기
+        const joins = await JoinModel.find({channel:data.channelId})
+        console.log('joinUsers',joins)
+
+        const allMessage = await getMessages(data.channelId)
+        console.log('allMessage',allMessage)
+        joins.map(async(join)=>{
+            let userId = join?.user?.toString()
+
+            io.to(userId).emit('messages',allMessage || [])
+            const channels = await getChannels(userId) // 사람마다 갖고있는 채널들이 다르니까
+            console.log('새메세지 channels', channels)
+            io.to(userId).emit('channel-list',channels)
+        })
     })
 
     // seen 읽음여부 처리
-    socket.on('seen', async(msgByUserId)=>{
-        let conversation = await ConversationModel.findOne({ // 하나의 방을 찾는다.
-            "$or": [
-                {sender: user?.id, receiver: msgByUserId},
-                {sender: msgByUserId, receiver: user?._id}
-            ]
-        })
-        const conversationMessageId = conversation?.messages || [] // 하나의 방안에 있는 전체메세지
-        const updateMessages = await MessageModel.updateMany(
-            {_id: {"$in": conversationMessageId}, msgByUserId: msgByUserId}, // 조건식
-            {"$set": {seen: true}} // 업데이트절
+    socket.on('seen', async(channelId,userId)=>{
+        console.log('seen',userId)
+        let join = await JoinModel.findOne(
+            {user: userId, channel: channelId}
+        )
+        await JoinModel.updateOne(
+            {_id: {"$in": join?._id}}, // 조건식
+            {"$set": {lastReadTimestamp: Date()}} // 업데이트절
         )
         // 사이드바에 대화방 목록 업데이트
-        const conversationSender = await getConversation(user?._id?.toString())
-        const conversationReceiver = await getConversation(msgByUserId)
-        io.to(user?._id?.toString()).emit('conversation',conversationSender)
-        io.to(msgByUserId).emit('conversation',conversationReceiver)
+        const channels = await getChannels(userId)
+        console.log('seen return channels', channels)
+        io.to(userId).emit('channel-list',channels)
     })
 
     // 연결된 접속 disconnect

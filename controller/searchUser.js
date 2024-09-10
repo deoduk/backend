@@ -3,26 +3,14 @@ const getMembers = require('../helpers/getMembers')
 
 const searchUser = async(req,res) => {
     try{
-        const { search, channelId } = req.body
+        const { search } = req.body
         console.log('search',search)
-        console.log('channelId',channelId)
-        if (search==='' && channelId===undefined) {
-            console.log(111)
+        if (search==='') {
             return res.status(200).json({
-                message: 'alluser',
+                message: '검색어를 1글자 이상 입력하셔야합니다.',
                 data: [],
                 success: true
             })    
-        }
-        if (search==='' && channelId!==undefined) {
-            console.log(2222)
-            const members = await getMembers(channelId)
-            console.log('members',members)
-            return res.status(200).json({
-                message: 'members',
-                data: members,
-                success: true
-            })
         }
         const query = new RegExp(search,"i","g")
         const user = await UserModel.find({

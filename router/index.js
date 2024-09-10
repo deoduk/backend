@@ -6,6 +6,8 @@ const logout = require('../controller/logout.js')
 const updateUserDetails = require('../controller/updateUserDetails.js')
 const searchUser = require('../controller/searchUser')
 const createChannel = require('../controller/createChannel')
+const channelMembers = require('../controller/channelMembers')
+const joinMember = require('../controller/joinMember')
 
 const router = express()
 
@@ -22,5 +24,7 @@ router.get("/logout", logout) //로그아웃
 router.post('/update-user', updateUserDetails) //사용자이름+사진을 바꾸게
 router.post('/search-user',searchUser) //사용자검색
 router.post('/create-channel',createChannel) //채널생성
+router.post('/channelMembers',channelMembers) //채널맴버들 반환
+router.post('/joinMember',joinMember) //멤버1명 채널에 조인
 
 module.exports = router

@@ -62,7 +62,7 @@ io.on('connection',async(socket)=>{
         
         // 2. 대화방에 있는 메세지들 보내기
         const allMessage = await getMessages(channelId)
-        socket.emit('messages',allMessage || [])
+        socket.emit('init messages',allMessage || [])
     })
 
     // 새 채널 생성
@@ -110,7 +110,7 @@ io.on('connection',async(socket)=>{
         joins.map(async(join)=>{
             let userId = join?.user?.toString()
 
-            io.to(userId).emit('messages',allMessage || [])
+            io.to(userId).emit('new messages',allMessage || [])
             const channels = await getChannels(userId) // 사람마다 갖고있는 채널들이 다르니까
             console.log('새메세지 channels', channels)
             io.to(userId).emit('channel-list',channels)
@@ -129,7 +129,6 @@ io.on('connection',async(socket)=>{
         )
         // 사이드바에 대화방 목록 업데이트
         const channels = await getChannels(userId)
-        console.log('seen return channels', channels)
         io.to(userId).emit('channel-list',channels)
     })
 

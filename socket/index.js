@@ -112,7 +112,6 @@ io.on('connection',async(socket)=>{
 
             io.to(userId).emit('new messages',allMessage || [])
             const channels = await getChannels(userId) // 사람마다 갖고있는 채널들이 다르니까
-            console.log('새메세지 channels', channels)
             io.to(userId).emit('channel-list',channels)
         })
     })

@@ -12,14 +12,20 @@ const getChannels = async(userId) => {
                     path: 'writeUser'
                 }
             },
+            sort: {updatedAt:-1} 
         })
-        .sort({createAt:-1})
+        // .sort({updatedAt:-1})
 
-    const channels = joins.map((join)=>{
+    // 위의 조인한 콜렉션으로 정렬순서가 안되서 임시로 사용함        
+    const sorted = joins.sort((a,b)=>{
+        return new Date(b.channel.updatedAt).getTime() - new Date(a.channel.updatedAt).getTime()
+    })
+    // console.log('sorted',sorted)
+    const channels = sorted.map((join)=>{
         // 내가 안읽은 메세지 갯수 구하기
         const countUnseenMsg = join.lastReadTimestamp < join.lastMessage?.createdAt ? 1 : 0
 
-        // 대화방 1개씩 반환 축적
+        // 채널 1개씩 반환 축적
         return {
             _id: join?.channel?._id,
             name: join?.channel?.name,

@@ -90,7 +90,6 @@ io.on('connection',async(socket)=>{
             writeUser: data?.writeUser,
         })
         const saveMessage = await message.save() // DB에 저장
-        console.log('saveMessage', saveMessage)
 
         // 4. 대화방과 대화1건 연결
         const updateChannel = await ChannelModel.updateOne({
@@ -99,17 +98,12 @@ io.on('connection',async(socket)=>{
             "$push": {messages: saveMessage?._id}, // 배열에 추가
             lastMessage: saveMessage?._id
         })
-        console.log('updatedChannel',updateChannel)
 
         // 5. 채널에 Join한 사람들에게 보내기
         const joins = await JoinModel.find({channel:data.channelId})
-        console.log('joinUsers',joins)
-
         const allMessage = await getMessages(data.channelId)
-        console.log('allMessage',allMessage)
         joins.map(async(join)=>{
             let userId = join?.user?.toString()
-
             io.to(userId).emit('new messages',allMessage || [])
             const channels = await getChannels(userId) // 사람마다 갖고있는 채널들이 다르니까
             io.to(userId).emit('channel-list',channels)

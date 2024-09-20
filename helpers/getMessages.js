@@ -11,6 +11,7 @@ const getMessages = async(channelId) => {
             },
         })
         .sort({updatedAt: -1})
+
     return messages
 }
 

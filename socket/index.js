@@ -50,9 +50,12 @@ io.on('connection',async(socket)=>{
     // 방안에 들어올 때
     socket.on('message-page',async(channelId)=>{
         console.log('query channelId',channelId)
+        if (!channelId || channelId===undefined) return
 
         // 1. 채널세부정보 보내기
         const channelDetails = await ChannelModel.findById(channelId)
+        if (!channelDetails) return
+
         const payload = {
             _id: channelDetails?._id,
             name: channelDetails?.name,
@@ -112,10 +115,12 @@ io.on('connection',async(socket)=>{
 
     // seen 읽음여부 처리
     socket.on('seen', async(channelId,userId)=>{
-        console.log('seen',userId)
+        if (!channelId || !userId) return
+        console.log('seen3',userId)
         let join = await JoinModel.findOne(
             {user: userId, channel: channelId}
         )
+
         await JoinModel.updateOne(
             {_id: {"$in": join?._id}}, // 조건식
             {"$set": {lastReadTimestamp: Date()}} // 업데이트절

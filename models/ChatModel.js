@@ -9,6 +9,7 @@ const channelSchema = new mongoose.Schema({
         ref: 'Message'
     }],
     lastMessage: {type: mongoose.Schema.ObjectId, ref: 'Message'}, // 마지막메세지 
+    key: {type: String, default: ""}, // 외부키
 },{
     timestamps: true
 })

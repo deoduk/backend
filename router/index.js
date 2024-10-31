@@ -8,6 +8,7 @@ const searchUser = require('../controller/searchUser')
 const createChannel = require('../controller/createChannel')
 const channelMembers = require('../controller/channelMembers')
 const joinMember = require('../controller/joinMember')
+const gateway = require('../controller/gateway')
 
 const router = express()
 
@@ -26,5 +27,7 @@ router.post('/search-user',searchUser) //사용자검색
 router.post('/create-channel',createChannel) //채널생성
 router.post('/channelMembers',channelMembers) //채널맴버들 반환
 router.post('/joinMember',joinMember) //멤버1명 채널에 조인
+
+router.post('/gateway',gateway) //지오젝 App에서 넘어옴
 
 module.exports = router
